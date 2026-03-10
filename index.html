@@ -1382,7 +1382,7 @@ const fd = d => { if(!d)return''; const p=d.split('/'); return p.length===3?`${p
 const ud = d => { if(!d)return''; const p=d.split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:''; };
 const NET_C = { Instagram:'#E1306C', LinkedIn:'#0A66C2', Facebook:'#1877F2', X:'#8899aa', YouTube:'#FF0000', TikTok:'#69C9D0', Outros:'#888' };
 const NET_I = { Instagram:'fa-instagram', LinkedIn:'fa-linkedin', Facebook:'fa-facebook', X:'fa-x-twitter', YouTube:'fa-youtube', TikTok:'fa-tiktok' };
-const ni = n => NET_I[n]||'fa-globe';
+const ni = n => NET_I[n]||'';
 const sLabel = s => ({positive:'😊 Positivo', neutral:'😐 Neutro', negative:'😞 Negativo'}[s]||'—');
 const sCls = s => ({positive:'s-pos', neutral:'s-neu', negative:'s-neg'}[s]||'');
 function nxtId() { return posts.reduce((m,p)=>Math.max(m,typeof p.id==='number'?p.id:0),0)+1; }
@@ -1465,9 +1465,18 @@ function renderSidebar() {
       </div>`;
 
     hdr.addEventListener('click', () => {
-      if (expandedBrands.has(b.id)) expandedBrands.delete(b.id);
-      else expandedBrands.add(b.id);
-      selectFilter(b.id, 'all');
+      // Toggle expand/collapse independently
+      if (expandedBrands.has(b.id)) {
+        expandedBrands.delete(b.id);
+      } else {
+        expandedBrands.add(b.id);
+      }
+      // Update filter to this brand but don't force re-expand inside selectFilter
+      filterBrand = b.id;
+      filterTheme = 'all';
+      $('hdr-ctx').textContent = getBrandName(b.id);
+      renderSidebar();
+      applyFilters();
     });
 
     const themesDiv = document.createElement('div');
@@ -1522,12 +1531,12 @@ function onBrandChange() { rebuildThemeSelect(); }
 function selectFilter(brandId, themeId) {
   filterBrand = brandId;
   filterTheme = themeId;
-  // expand brand if selecting from brand
-  if (brandId !== 'all') expandedBrands.add(brandId);
+  // When selecting a specific theme, ensure the parent brand stays expanded
+  if (themeId !== 'all' && brandId !== 'all') expandedBrands.add(brandId);
   // update header
   let ctx = 'Todos os posts';
   if (brandId !== 'all' && themeId === 'all') ctx = getBrandName(brandId);
-  if (themeId !== 'all') ctx = `${getBrandName(brands.find(b=>b.id===brandId)?.id||brandId)} › ${getThemeName(themeId)}`;
+  if (themeId !== 'all') ctx = `${getBrandName(brandId)} › ${getThemeName(themeId)}`;
   $('hdr-ctx').textContent = ctx;
   renderSidebar();
   applyFilters();
@@ -1611,7 +1620,7 @@ function renderFeed() {
       <div class="feed-item${ac}${sc}" onclick="loadPost(${i})">
         <div class="fi-row1">
           <div class="fi-left">
-            <i class="fa-brands ${ni(p.network)}" style="font-size:12px;color:${NET_C[p.network]||'#888'};flex-shrink:0;"></i>
+            ${ni(p.network)?`<i class="fa-brands ${ni(p.network)}" style="font-size:12px;color:${NET_C[p.network]||'#888'};flex-shrink:0;"></i>`:`<i class="fa-solid fa-globe" style="font-size:12px;color:#888;flex-shrink:0;"></i>`}
             <span class="fi-profile">${p.profile}</span>
             ${prio}
           </div>
@@ -1977,7 +1986,7 @@ function renderList() {
       <td><input type="checkbox" class="rchk" data-id="${pid}" onchange="toggleRow(this)" ${sel.has(pid)?'checked':''}></td>
       <td style="font-family:var(--mono);font-size:9px;color:var(--text-ghost);">#${pid}</td>
       <td style="font-family:var(--mono);font-size:11px;">${p.date||'—'}</td>
-      <td><div style="display:flex;align-items:center;gap:5px;"><i class="fa-brands ${ni(p.network)}" style="color:${NET_C[p.network]||'#888'};"></i><span style="font-size:11px;font-weight:500;">${p.network}</span></div></td>
+      <td><div style="display:flex;align-items:center;gap:5px;">${ni(p.network)?`<i class="fa-brands ${ni(p.network)}" style="color:${NET_C[p.network]||'#888'};"></i>`:`<i class="fa-solid fa-globe" style="color:#888;"></i>`}<span style="font-size:11px;font-weight:500;">${p.network}</span></div></td>
       <td style="font-size:11px;font-weight:600;color:var(--cyan);">${p.profile}</td>
       <td style="max-width:190px;"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--text-muted);" title="${p.text.replace(/"/g,'&quot;')}">${p.text}</div></td>
       <td><span class="badge b-id" style="font-size:8px;">${getBrandName(p.brand_id)}</span></td>
@@ -2177,7 +2186,7 @@ document.querySelectorAll('.modal-ov').forEach(m=>m.addEventListener('click',e=>
 function toast(msg,type='ok'){
   const el=document.createElement('div');
   el.className=`toast t-${type}`;
-  const i={ok:'fa-check-circle',warn:'fa-triangle-exclamation',err:'fa-xmark-circle'};
+  const i={ok:'fa-circle-check',warn:'fa-triangle-exclamation',err:'fa-circle-xmark'};
   el.innerHTML=`<i class="fa-solid ${i[type]||i.ok}"></i> ${msg}`;
   $('toasts').appendChild(el);
   setTimeout(()=>{el.classList.add('toast-exit');setTimeout(()=>el.remove(),260);},2700);
